@@ -28,3 +28,7 @@ class ReplayBuffer:
     
     def get_length(self):
         return len(self.data)
+    
+    def prune(self):
+        avg_score = np.mean([entry[2] for entry in self.data])
+        self.data = deque((entry for entry in self.data if entry[2] > avg_score), maxlen=self.buffer_size)
