@@ -8,10 +8,11 @@ from Model import Model, Agent
 import os
 
 device = torch.device("cpu")
-env = knights_archers_zombies_v10.env()
-env.reset(seed=42)
+env = knights_archers_zombies_v10.env(num_archers=4, num_knights=0, spawn_rate=10)
+env.reset()
 
 LEARNING_RATE = 0.001
+MAX_STEPS = 1000
 NUM_OF_STACKED_FRAMES = 4
 TRAINING_THRESHOLD = 5000
 EPSILON_DECAY = 0.001
@@ -20,7 +21,7 @@ FINAL_EPSILON = 0.01
 DISCOUNT_FACTOR = 0.99
 NUM_OF_STEPS_TO_UPDATE = 100
 BATCH_SIZE = 256
-NUM_OF_EPISODES = 20000
+NUM_OF_EPISODES = 100000
 
 agents = env.possible_agents
 agent_models = {}
@@ -43,6 +44,7 @@ episode_scores = []
 
 for ep in range(1, NUM_OF_EPISODES + 1):
     env.reset()
+    step_count = 0
     done = {agent_id: False for agent_id in agents}
     truncated = {agent_id: False for agent_id in agents}
     episode_score = {agent_id: 0 for agent_id in agents}
@@ -52,7 +54,12 @@ for ep in range(1, NUM_OF_EPISODES + 1):
         for agent_id in agents
     }
 
-    while not all(done.values()) and not all(truncated.values()):
+    while not all(done[agent] or truncated[agent] for agent in agents):
+        step_count += 1
+        if step_count > MAX_STEPS:
+            print(f"Force exiting loop at step {step_count}. Done: {done}, Truncated: {truncated}")
+            break
+
         for agent_id in env.agent_iter():
             
             # Get the latest observation and check if the agent is done
