@@ -4,6 +4,7 @@ from collections import deque
 from PIL import Image
 import torch
 
+# This is to downscale image and if you are wondering what size was chosen and why move to Model.py
 def downscale_image(image, target_size=(84, 84)):
     image = Image.fromarray(image).convert('L')
     image = image.resize(target_size, Image.Resampling.LANCZOS) 
@@ -15,6 +16,7 @@ def update_frame_stack(stack, new_frame):
     new_stack[1:, :, :] = stack[:-1, :, :]  
     return new_stack
 
+# Replay buffers help the ML not learn every single step and have opportunities to take paths they might otherwise will not.
 class ReplayBuffer:
     def __init__(self, buffer_size):
         self.data = deque(maxlen=buffer_size)

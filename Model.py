@@ -4,6 +4,9 @@ import torch.nn.functional as F
 import copy
 import random
 
+# The model is a DQN that uses PyTorch. The numbers in the conv2d is for the size of the game and environment
+# The fc1 is the same thing with the (7 * 7 * 64) which is the size of the env AFTER we downscale the frame
+# This was also the combinaiton of other models found online
 class Model(nn.Module):
     def __init__(self, num_actions):
         super(Model, self).__init__()
@@ -21,6 +24,7 @@ class Model(nn.Module):
         x = F.relu(self.fc1(x))
         return self.fc2(x)
 
+# The agent class is supposed to hold all the hyper parameters, select the actions, and train the model
 class Agent:
     def __init__(self, epsilon_decay, initial_epsilon, final_epsilon, discount_factor, action_value_function, loss_fn, optimizer, device):
         self.epsilon_decay = epsilon_decay
@@ -36,7 +40,9 @@ class Agent:
         self.action_counter = 0
         self.previous_action = None
         self.device = device
-        
+
+    # The action is greedy epsilon method where it will commit an action with a percentage chance of it being random
+    # Doing this makes it so that it has some data to learn from the start and then progress further into the run 
     def select_action(self, action_space, current_state):
         possible_actions = list(range(action_space))
 
@@ -55,10 +61,11 @@ class Agent:
         self.action_counter += 1
         return chosen_action
 
-
+    # Here is when we take the batch from the replay buffer and train off of PyTorch tensors.
     def training_step(self, minibatch):
         batch_states, batch_actions, batch_rewards, batch_next_states, batch_terminated, batch_truncated = zip(*minibatch)
         
+        # We run the batch into the tensors and get back their weight
         batch_states = torch.stack(batch_states).to(self.device)
         batch_actions = torch.tensor(batch_actions, dtype=torch.long, device=self.device)
         batch_rewards = torch.tensor(batch_rewards, dtype=torch.float32, device=self.device)
@@ -75,13 +82,13 @@ class Agent:
         next_q_max = next_q_values.max(1)[0]
         batch_target = batch_rewards + self.discount_factor * next_q_max * not_done_mask
 
+        # handle loss and gradient
         loss = self.loss_fn(current_q, batch_target)
-
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
-        # Soft update of target network
+        # Update of target network 
         tau = 0.005 
         for target_param, param in zip(self.target_action_value_function.parameters(), self.action_value_function.parameters()):
             target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
